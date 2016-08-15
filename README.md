@@ -3,7 +3,7 @@ GDAL compiled with C#/Mono bindings, for linux (64 and 32 bits).
 
 GDAL ships with [C# bindings](https://trac.osgeo.org/gdal/wiki/GdalOgrInCsharp) - however their compilation is not straightforward for linux. This repository aims to fill this gap by providing reasonably up-to-date, pre-compiled GDAL bindings for C#. The current bindings are for GDAL 2.1.1.
 
-The binaries are provided in this repository to enable automatic installation of LANDIS-II in linux. Step-by-step compilation instructions are also available [here](https://github.com/jealie/binaries_GDAL_Csharp/blob/master/compilationNotes.txt) in case you want to build the bindings yourself.
+The initial motivation to provide binaries was to enable automatic installation of [LANDIS-II](https://github.com/jealie/Core-Model) in linux, although they should work for any other Mono projects. Step-by-step compilation instructions are also available [here](https://github.com/jealie/binaries_GDAL_Csharp/blob/master/compilationNotes.txt) in case you want to build the bindings yourself.
 
 ## Using these libraries in your C# projects
 
@@ -13,4 +13,4 @@ Make sure that mono can find the libraries at runtime, by invoking for example `
 ```shell
 LD_PRELOAD="/path/to/libgdal.so /path/to/libgdal_wrap.so" mono your_program.exe
 ```
-Make also sure that mono can find the gdal\_sharp.dll file: this can be done easily by copying/linking it in the same directory as your\_program.exe
+Make also sure that mono can find the `gdal_sharp.dll` file: this can be easily done by copying/linking it in the same directory as your\_program.exe
