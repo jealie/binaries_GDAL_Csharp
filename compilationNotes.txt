@@ -1,0 +1,96 @@
+# Step 1: Download gdal source code.
+# For this walkthrough version 2.1.1 was used.
+curl -L http://download.osgeo.org/gdal/2.1.1/gdal-2.1.1.tar.gz | tar xz
+
+# Step 2: configure, make and make install gdal.
+# This is done in a local prefix.
+cd gdal-2.1.1/
+./configure --prefix `pwd`/build --without-python CFLAGS="-fPIC"
+make
+make install
+
+# step 3: build the SWIG C# bindings.
+# First of all make sure that SWIG is available. Any version of SWIG should work (I have tried SWIG 1.3 and 2.0 with success)
+# If SWIG is not installed the build will fail with this error message:
+### /bin/bash: swig: command not found
+### ../SWIGmake.base:10: recipe for target 'gdal_wrap.cpp' failed
+### make: *** [gdal_wrap.cpp] Error 127
+# Two other problems arise for the compilation of the SWIG bindings, we will go through them one by one.
+# First go to the csharp directory:
+cd swig/csharp
+
+# step 3a: solve the SWIG double declaration errors.
+make
+# The "make" command should fail with this message:
+### osr/OsrPINVOKE.cs(192,10): error CS0111: A member `OSGeo.OSR.OsrPINVOKE.OsrPINVOKE()' is already defined. Rename this member or use different parameter types
+### osr/OsrPINVOKE.cs(188,10): (Location of the symbol related to previous error)
+### Compilation failed: 1 error(s), 1 warnings
+### GNUmakefile:65: recipe for target 'gdal_csharp' failed
+### make: *** [gdal_csharp] Error 1
+# The solution is to edit the file "osr/OsrPINVOKE.cs" and remove the double declaration.
+# Before it should look like this:
+### 185   static protected SWIGStringHelper swigStringHelper = new SWIGStringHelper();
+### 186 
+### 187 
+### 188   static OsrPINVOKE() {
+### 189   }
+### 190 
+### 191 
+### 192   static OsrPINVOKE() {
+### 193   }
+### 194 
+### 195 
+### 196   [DllImport("osr_wrap", EntryPoint="CSharp_UseExceptions")]
+# Modify it so it looks like this:
+### 185   static protected SWIGStringHelper swigStringHelper = new SWIGStringHelper();
+### 186 
+### 187 
+### 188   static OsrPINVOKE() {
+### 189   }
+### 190 
+### 191 
+### 192   [DllImport("osr_wrap", EntryPoint="CSharp_UseExceptions")]
+make
+# Similar errors will arise for the following files:
+# ogr/OgrPINVOKE.cs ; ogr/OsrPINVOKE.cs ; gdal/GdalPINVOKE.cs
+# Apply the same type of fix to each of them.
+
+# step 3b: solve the SWIG variable renaming errors.
+make
+# At this point you will get a new set of error messages:
+### gdal/Band.cs(17,79): error CS0117: `OSGeo.GDAL.GdalPINVOKE' does not contain a definition for `BandUpcast'
+### gdal/GdalPINVOKE.cs(14,7): (Location of the symbol related to previous error)
+### gdal/Dataset.cs(17,82): error CS0117: `OSGeo.GDAL.GdalPINVOKE' does not contain a definition for `DatasetUpcast'
+### gdal/GdalPINVOKE.cs(14,7): (Location of the symbol related to previous error)
+### gdal/Driver.cs(17,81): error CS0117: `OSGeo.GDAL.GdalPINVOKE' does not contain a definition for `DriverUpcast'
+### gdal/GdalPINVOKE.cs(14,7): (Location of the symbol related to previous error)
+### Compilation failed: 3 error(s), 1 warnings
+### GNUmakefile:65: recipe for target 'gdal_csharp' failed
+### make: *** [gdal_csharp] Error 1
+# You will need to edit the following files: gdal/Band.cs ; gdal/Dataset.cs ; gdal/Driver.cs
+# In gdal/Band.cs, add _SWIG in the variable "BandUpcast" by changing line 17 from:
+### 17   public Band(IntPtr cPtr, bool cMemoryOwn, object parent) : base(GdalPINVOKE.BandUpcast(cPtr), cMemoryOwn, parent) {
+# to:
+### 17   public Band(IntPtr cPtr, bool cMemoryOwn, object parent) : base(GdalPINVOKE.Band_SWIGUpcast(cPtr), cMemoryOwn, parent) {
+# Likewise, in gdal/Dataset.cs, change from:
+###  17   public Dataset(IntPtr cPtr, bool cMemoryOwn, object parent) : base(GdalPINVOKE.DatasetUpcast(cPtr), cMemoryOwn, parent) {
+# to:
+###  17   public Dataset(IntPtr cPtr, bool cMemoryOwn, object parent) : base(GdalPINVOKE.Dataset_SWIGUpcast(cPtr), cMemoryOwn, parent) {
+# And in gdal/Driver.cs, change from:
+###  17   public Driver(IntPtr cPtr, bool cMemoryOwn, object parent) : base(GdalPINVOKE.DriverUpcast(cPtr), cMemoryOwn, parent) {
+# to:
+###  17   public Driver(IntPtr cPtr, bool cMemoryOwn, object parent) : base(GdalPINVOKE.Driver_SWIGUpcast(cPtr), cMemoryOwn, parent) {
+
+# step 3c: don't forget to finally compile the SWIG bindings.
+make
+# This should work this time.
+# Make sure that the files "gdal_csharp.dll" and "gdal_wrap.o" have been created.
+
+# step 4: build the static libgdal_wrap.so library.
+# In the same directory (swig/csharp/), run the following command:
+g++ -shared -o libgdal_wrap.so gdal_wrap.o ../../build/lib/libgdal.so
+# This will create the static library libgdal_wrap.so
+
+# To deploy your mono projects using GDAL on linux, you will need to ship the following files with it:
+# build/lib/libgdal.so.20 ; swig/csharp/libgdal_wrap.so ; swig/csharp/gdal_csharp.dll
+# See also README.md for further instructions on how to use them
